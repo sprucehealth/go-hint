@@ -11,6 +11,14 @@ const (
 	PhoneTypeMobile = "Mobile"
 	PhoneTypeOffice = "Office"
 	PhoneTypeHome   = "Home"
+
+	// membership states retreived from http://support.hint.com/knowledgebase/articles/804717-membership-statuses
+	MembershipStatusActive      = "active"
+	MembershipStatusInactive    = "inactive"
+	MembershipStatusUnpaid      = "unpaid"
+	MembershipStatusEnded       = "ended"
+	MembershipStatusPending     = "pending"
+	MembershipStatusUnconfirmed = "unconfirmed"
 )
 
 // Phone represents a typed phone number
@@ -83,6 +91,7 @@ type Patient struct {
 	AddressCity              string        `json:"address_city,omitempty"`
 	AddressState             string        `json:"address_state,omitempty"`
 	AddressCountry           string        `json:"address_country,omitempty"`
+	ProviderWebLink          string        `json:"provider_web_link,omitempty"`
 }
 
 func PatientURLForProvider(id string) string {
