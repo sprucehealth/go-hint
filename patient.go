@@ -21,6 +21,17 @@ const (
 	MembershipStatusUnconfirmed = "unconfirmed"
 )
 
+var (
+	AvailableMembershipStatuses = []string{
+		MembershipStatusActive,
+		MembershipStatusInactive,
+		MembershipStatusUnpaid,
+		MembershipStatusEnded,
+		MembershipStatusPending,
+		MembershipStatusUnconfirmed,
+	}
+)
+
 // Phone represents a typed phone number
 type Phone struct {
 	Type   string `json:"type"`
@@ -92,6 +103,7 @@ type Patient struct {
 	AddressState             string        `json:"address_state,omitempty"`
 	AddressCountry           string        `json:"address_country,omitempty"`
 	ProviderWebLink          string        `json:"provider_web_link,omitempty"`
+	Memberships              []*Membership `json:"memberships"`
 }
 
 func PatientURLForProvider(id string) string {

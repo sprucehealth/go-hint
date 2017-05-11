@@ -70,3 +70,8 @@ func (it *Iter) Current() interface{} {
 func (it *Iter) Err() error {
 	return it.err
 }
+
+// Count returns the total number of elements in the resulting interable
+func (it *Iter) Count() uint64 {
+	return it.meta.TotalCount
+}
