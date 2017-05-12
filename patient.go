@@ -90,7 +90,6 @@ type Patient struct {
 	ExternalSourceName       string        `json:"external_source_name,omitempty"`
 	ExternalLinkID           string        `json:"external_link_id,omitempty"`
 	Practitioner             *Practitioner `json:"practitioner,omitempty"`
-	LeadSource               string        `json:"lead_source,omitempty"`
 	HealthInsuranceGroupID   string        `json:"health_insurance_group_id,omitempty"`
 	HealthInsuranceMemberID  string        `json:"health_insurance_member_id,omitempty"`
 	HealthInsurancePayerName string        `json:"health_insurance_payer_name,omitempty"`
