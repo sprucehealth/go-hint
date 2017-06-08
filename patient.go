@@ -58,6 +58,10 @@ type PatientParams struct {
 	ExternalSourceID         string   `json:"external_source_id,omitempty"`
 	ExternalSourceName       string   `json:"external_source_name,omitempty"`
 	ExternalLinkID           string   `json:"external_link_id,omitempty"`
+	IntegrationRecordID      string   `json:"integration_record_id"`
+	IntegrationSyncStatus    string   `json:"integration_sync_status"`
+	IntegrationErrorMessage  string   `json:"integration_error_message"`
+	IntegrationWebLink       string   `json:"integration_web_link"`
 	Phones                   []*Phone `json:"phones,omitempty"`
 }
 
@@ -103,6 +107,10 @@ type Patient struct {
 	AddressCountry           string        `json:"address_country,omitempty"`
 	ProviderWebLink          string        `json:"provider_web_link,omitempty"`
 	Memberships              []*Membership `json:"memberships"`
+	IntegrationRecordID      string        `json:"integration_record_id"`
+	IntegrationSyncStatus    string        `json:"integration_sync_status"`
+	IntegrationErrorMessage  string        `json:"integration_error_message"`
+	IntegrationWebLink       string        `json:"integration_web_link"`
 }
 
 func PatientURLForProvider(id string) string {

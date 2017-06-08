@@ -1,17 +1,20 @@
 package hint
 
-import (
-	"encoding/json"
-)
+import "encoding/json"
 
 // Error is a structured response indicating a non-2xx HTTP response.
 type Error struct {
-	HTTPStatusCode int                 `json:"status"`
-	Message        string              `json:"message"`
-	Errors         map[string][]string `json:"errors"`
+	HTTPStatusCode int    `json:"status"`
+	Message        string `json:"message"`
+	Errors         struct {
+		Location string `json:"location"`
+		Type     string `json:"type"`
+		ID       string `json:"id"`
+	} `json:"errors"`
 }
 
 func (e *Error) Error() string {
-	ret, _ := json.Marshal(e)
-	return string(ret)
+
+	data, _ := json.Marshal(e)
+	return string(data)
 }
