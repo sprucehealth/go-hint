@@ -40,29 +40,30 @@ type Phone struct {
 
 // PatientParams represents the mutable fields of a patient.
 type PatientParams struct {
-	FirstName                string   `json:"first_name,omitempty"`
-	LastName                 string   `json:"last_name,omitempty"`
-	Email                    string   `json:"email,omitempty"`
-	Gender                   string   `json:"gender,omitempty"`
-	DOB                      string   `json:"dob,omitempty"`
-	HealthInsuranceGroupID   string   `json:"health_insurance_group_id,omitempty"`
-	HealthInsuranceMemberID  string   `json:"health_insurance_member_id,omitempty"`
-	HealthInsurancePayerName string   `json:"health_insurance_payer_name,omitempty"`
-	HealthInsurancePayerID   string   `json:"health_insurance_payer_id,omitempty"`
-	AddressLine1             string   `json:"address_line_1,omitempty"`
-	AddressLine2             string   `json:"address_line_2,omitempty"`
-	AddressCity              string   `json:"address_city,omitempty"`
-	AddressState             string   `json:"address_state,omitempty"`
-	AddressZip               string   `json:"address_zip,omitempty"`
-	AddressCountry           string   `json:"address_country,omitempty"`
-	ExternalSourceID         string   `json:"external_source_id,omitempty"`
-	ExternalSourceName       string   `json:"external_source_name,omitempty"`
-	ExternalLinkID           string   `json:"external_link_id,omitempty"`
-	IntegrationRecordID      string   `json:"integration_record_id"`
-	IntegrationSyncStatus    string   `json:"integration_sync_status"`
-	IntegrationErrorMessage  string   `json:"integration_error_message"`
-	IntegrationWebLink       string   `json:"integration_web_link"`
-	Phones                   []*Phone `json:"phones,omitempty"`
+	FirstName                string        `json:"first_name,omitempty"`
+	LastName                 string        `json:"last_name,omitempty"`
+	Email                    string        `json:"email,omitempty"`
+	Gender                   string        `json:"gender,omitempty"`
+	DOB                      string        `json:"dob,omitempty"`
+	HealthInsuranceGroupID   string        `json:"health_insurance_group_id,omitempty"`
+	HealthInsuranceMemberID  string        `json:"health_insurance_member_id,omitempty"`
+	HealthInsurancePayerName string        `json:"health_insurance_payer_name,omitempty"`
+	HealthInsurancePayerID   string        `json:"health_insurance_payer_id,omitempty"`
+	AddressLine1             string        `json:"address_line_1,omitempty"`
+	AddressLine2             string        `json:"address_line_2,omitempty"`
+	AddressCity              string        `json:"address_city,omitempty"`
+	AddressState             string        `json:"address_state,omitempty"`
+	AddressZip               string        `json:"address_zip,omitempty"`
+	AddressCountry           string        `json:"address_country,omitempty"`
+	ExternalSourceID         string        `json:"external_source_id,omitempty"`
+	ExternalSourceName       string        `json:"external_source_name,omitempty"`
+	ExternalLinkID           string        `json:"external_link_id,omitempty"`
+	IntegrationRecordID      string        `json:"integration_record_id"`
+	IntegrationSyncStatus    string        `json:"integration_sync_status"`
+	IntegrationErrorMessage  string        `json:"integration_error_message"`
+	IntegrationWebLink       string        `json:"integration_web_link"`
+	Phones                   []*Phone      `json:"phones,omitempty"`
+	Practitioner             *Practitioner `json:"practitioner,omitempty"`
 }
 
 // Validate ensures that the required fields in when creating
