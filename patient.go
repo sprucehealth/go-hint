@@ -14,11 +14,12 @@ const (
 
 	// membership states retreived from http://support.hint.com/knowledgebase/articles/804717-membership-statuses
 	MembershipStatusActive      = "active"
-	MembershipStatusInactive    = "inactive"
-	MembershipStatusUnpaid      = "unpaid"
+	MembershipStatusArchived    = "archived"
 	MembershipStatusEnded       = "ended"
+	MembershipStatusInactive    = "inactive"
 	MembershipStatusPending     = "pending"
 	MembershipStatusUnconfirmed = "unconfirmed"
+	MembershipStatusUnpaid      = "unpaid"
 )
 
 var (
