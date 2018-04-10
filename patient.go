@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	PhoneTypeMobile = "Mobile"
-	PhoneTypeOffice = "Office"
-	PhoneTypeHome   = "Home"
+	PhoneTypeMobile = "mobile"
+	PhoneTypeOffice = "office"
+	PhoneTypeHome   = "home"
 
 	// membership states retreived from http://support.hint.com/knowledgebase/articles/804717-membership-statuses
 	MembershipStatusActive      = "active"
@@ -25,11 +25,12 @@ const (
 var (
 	AvailableMembershipStatuses = []string{
 		MembershipStatusActive,
-		MembershipStatusInactive,
-		MembershipStatusUnpaid,
+		MembershipStatusArchived,
 		MembershipStatusEnded,
+		MembershipStatusInactive,
 		MembershipStatusPending,
 		MembershipStatusUnconfirmed,
+		MembershipStatusUnpaid,
 	}
 )
 
