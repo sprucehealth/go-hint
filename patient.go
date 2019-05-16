@@ -66,6 +66,7 @@ type PatientParams struct {
 	IntegrationWebLink       string        `json:"integration_web_link,omitempty"`
 	Phones                   []*Phone      `json:"phones,omitempty"`
 	Practitioner             *Practitioner `json:"practitioner,omitempty"`
+	Location                 *Location     `json:"location,omitempty"`
 }
 
 // Validate ensures that the required fields in when creating
