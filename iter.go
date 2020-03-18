@@ -75,3 +75,13 @@ func (it *Iter) Err() error {
 func (it *Iter) Count() uint64 {
 	return it.meta.TotalCount
 }
+
+// Offset returns the offset from which the last page was received
+func (it *Iter) Offset() uint64 {
+	return it.params.Offset
+}
+
+// Offset returns true if there is at least another page of results to query for\
+func (it *Iter) HasMore() bool {
+	return it.hasMore
+}
