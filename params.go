@@ -116,7 +116,7 @@ func (q *QueryItem) Encode() (string, error) {
 	}
 
 	if len(q.Operations) == 1 && q.Operations[0].Operator == OperatorEqualTo {
-		buffer.WriteString(q.Operations[0].Encode())
+		buffer.WriteString(url.QueryEscape(q.Operations[0].Encode()))
 	} else {
 		encodedOperations := make([]string, len(q.Operations))
 		for i, operation := range q.Operations {
