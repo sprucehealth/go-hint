@@ -92,6 +92,15 @@ func TestListParams(t *testing.T) {
 						},
 					},
 				},
+				{
+					Field: "blah",
+					Operations: []*Operation{
+						{
+							Operator: OperatorEqualTo,
+							Operand:  "N/A",
+						},
+					},
+				},
 			},
 		}
 
@@ -99,7 +108,7 @@ func TestListParams(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		expected := "created_at=2016-05-05&sort=-first_name&offset=10&limit=100"
+		expected := "created_at=2016-05-05&blah=N%2FA&sort=-first_name&offset=10&limit=100"
 		if encoded != expected {
 			t.Fatalf("Expected %s got %s", expected, encoded)
 		}
