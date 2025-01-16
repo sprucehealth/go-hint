@@ -53,7 +53,7 @@ func GetBackend() Backend {
 	}
 }
 
-//Key is the Hint Partner API key used globally in the binding.
+// Key is the Hint Partner API key used globally in the binding.
 var Key string
 
 // Testing indicates whether to use the staging or production URL
