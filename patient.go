@@ -12,10 +12,6 @@ const (
 	PhoneTypeOffice = "office"
 	PhoneTypeHome   = "home"
 
-	// Language options for patient's preferred language
-	LanguageEnglish = "en"
-	LanguageSpanish = "es"
-
 	// membership states retreived from http://support.hint.com/knowledgebase/articles/804717-membership-statuses
 	MembershipStatusActive      = "active"
 	MembershipStatusArchived    = "archived"
@@ -24,6 +20,13 @@ const (
 	MembershipStatusPending     = "pending"
 	MembershipStatusUnconfirmed = "unconfirmed"
 	MembershipStatusUnpaid      = "unpaid"
+)
+
+type Language string
+
+var (
+	LanguageEnglish Language = "en"
+	LanguageSpanish Language = "es"
 )
 
 var (
@@ -70,7 +73,7 @@ type PatientParams struct {
 	IntegrationWebLink       string        `json:"integration_web_link,omitempty"`
 	Phones                   []*Phone      `json:"phones,omitempty"`
 	Practitioner             *Practitioner `json:"practitioner,omitempty"`
-	PreferredLanguage        string        `json:"preferred_language,omitempty"`
+	PreferredLanguage        Language      `json:"preferred_language,omitempty"`
 }
 
 // Validate ensures that the required fields in when creating
@@ -120,7 +123,7 @@ type Patient struct {
 	IntegrationErrorMessage  string        `json:"integration_error_message"`
 	IntegrationWebLink       string        `json:"integration_web_link"`
 	Location                 *Location     `json:"location,omitempty"`
-	PreferredLanguage        string        `json:"preferred_language,omitempty"`
+	PreferredLanguage        Language      `json:"preferred_language,omitempty"`
 }
 
 func PatientURLForProvider(id string) string {
