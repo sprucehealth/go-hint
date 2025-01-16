@@ -70,7 +70,7 @@ type PatientParams struct {
 	IntegrationWebLink       string        `json:"integration_web_link,omitempty"`
 	Phones                   []*Phone      `json:"phones,omitempty"`
 	Practitioner             *Practitioner `json:"practitioner,omitempty"`
-	PreferredLanguage         string        `json:"preferred_language,omitempty"`
+	PreferredLanguage        string        `json:"preferred_language,omitempty"`
 }
 
 // Validate ensures that the required fields in when creating
@@ -120,7 +120,7 @@ type Patient struct {
 	IntegrationErrorMessage  string        `json:"integration_error_message"`
 	IntegrationWebLink       string        `json:"integration_web_link"`
 	Location                 *Location     `json:"location,omitempty"`
-	PreferredLanguage         string        `json:"preferred_language,omitempty"`
+	PreferredLanguage        string        `json:"preferred_language,omitempty"`
 }
 
 func PatientURLForProvider(id string) string {
