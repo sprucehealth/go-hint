@@ -1,20 +1,22 @@
 package hint
 
 type client struct {
-	Patient      PatientClient
-	OAuth        OAuthClient
-	Partner      PartnerClient
-	Practitioner PractitionerClient
+	Patient            PatientClient
+	OAuth              OAuthClient
+	Partner            PartnerClient
+	Practitioner       PractitionerClient
+	IntegrationRecords IntegrationRecordsClient
 }
 
 var defaultClient = getC()
 
 func getC() *client {
 	return &client{
-		Patient:      &patientClient{B: GetBackend(), Key: Key},
-		OAuth:        &oauthClient{B: GetBackend(), Key: Key},
-		Partner:      &partnerClient{B: GetBackend(), Key: Key},
-		Practitioner: &practitionerClient{B: GetBackend(), Key: Key},
+		Patient:            &patientClient{B: GetBackend(), Key: Key},
+		OAuth:              &oauthClient{B: GetBackend(), Key: Key},
+		Partner:            &partnerClient{B: GetBackend(), Key: Key},
+		Practitioner:       &practitionerClient{B: GetBackend(), Key: Key},
+		IntegrationRecords: &integrationRecordsClient{B: GetBackend(), Key: Key},
 	}
 }
 
@@ -31,6 +33,7 @@ type PracticeClient interface {
 	DeletePatient(id string) error
 	ListPatient(params *ListParams) *Iter
 	ListAllPractitioners() ([]*Practitioner, error)
+	GetIntegrationRecords(patientID string) ([]*IntegrationRecord, error)
 }
 
 // NewPracticeClient returns an implementation of practiceClient
@@ -136,4 +139,14 @@ func ListAllPractitioners(practiceKey string) ([]*Practitioner, error) {
 // ListAllPractitioners lists all practitioners part of the practice.
 func (c *practiceClient) ListAllPractitioners() ([]*Practitioner, error) {
 	return c.client.Practitioner.List(c.accessToken)
+}
+
+// GetIntegrationRecords gets all integration records for a patient.
+func GetIntegrationRecords(practiceKey, patientID string) ([]*IntegrationRecord, error) {
+	return defaultClient.IntegrationRecords.Get(practiceKey, patientID)
+}
+
+// GetIntegrationRecords gets all integration records for a patient.
+func (c *practiceClient) GetIntegrationRecords(patientID string) ([]*IntegrationRecord, error) {
+	return c.client.IntegrationRecords.Get(c.accessToken, patientID)
 }
