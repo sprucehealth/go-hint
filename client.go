@@ -1,22 +1,24 @@
 package hint
 
 type client struct {
-	Patient            PatientClient
-	OAuth              OAuthClient
-	Partner            PartnerClient
-	Practitioner       PractitionerClient
-	IntegrationRecords IntegrationRecordsClient
+	Patient              PatientClient
+	OAuth                OAuthClient
+	Partner              PartnerClient
+	Practitioner         PractitionerClient
+	IntegrationRecords   IntegrationRecordsClient
+	DocumentInteractions DocumentInteractionClient
 }
 
 var defaultClient = getC()
 
 func getC() *client {
 	return &client{
-		Patient:            &patientClient{B: GetBackend(), Key: Key},
-		OAuth:              &oauthClient{B: GetBackend(), Key: Key},
-		Partner:            &partnerClient{B: GetBackend(), Key: Key},
-		Practitioner:       &practitionerClient{B: GetBackend(), Key: Key},
-		IntegrationRecords: &integrationRecordsClient{B: GetBackend(), Key: Key},
+		Patient:              &patientClient{B: GetBackend(), Key: Key},
+		OAuth:                &oauthClient{B: GetBackend(), Key: Key},
+		Partner:              &partnerClient{B: GetBackend(), Key: Key},
+		Practitioner:         &practitionerClient{B: GetBackend(), Key: Key},
+		IntegrationRecords:   &integrationRecordsClient{B: GetBackend(), Key: Key},
+		DocumentInteractions: &documentInteractionClient{B: GetBackend(), Key: Key},
 	}
 }
 
@@ -34,6 +36,7 @@ type PracticeClient interface {
 	ListPatient(params *ListParams) *Iter
 	ListAllPractitioners() ([]*Practitioner, error)
 	GetIntegrationRecords(patientID string) ([]*IntegrationRecord, error)
+	CreateDocumentInteraction(patientID string, params *DocumentInteractionParams) (*DocumentInteraction, error)
 }
 
 // NewPracticeClient returns an implementation of practiceClient
@@ -62,6 +65,11 @@ func SetPartnerClient(c PartnerClient) {
 // SetPractitionerClient enables caller to provide a particular implementation of the practitioner client for mocking purposes.
 func SetPractitionerClient(c PractitionerClient) {
 	defaultClient.Practitioner = c
+}
+
+// SetDocumentInteractionsClient enables caller to provide a particular implementation of the document interactions client for mocking purposes.
+func SetDocumentInteractionsClient(c DocumentInteractionClient) {
+	defaultClient.DocumentInteractions = c
 }
 
 // NewPatient creates a new patient based on the params.
@@ -149,4 +157,14 @@ func GetIntegrationRecords(practiceKey, patientID string) ([]*IntegrationRecord,
 // GetIntegrationRecords gets all integration records for a patient.
 func (c *practiceClient) GetIntegrationRecords(patientID string) ([]*IntegrationRecord, error) {
 	return c.client.IntegrationRecords.Get(c.accessToken, patientID)
+}
+
+// CreateDocumentInteraction creates a document interaction on a patient.
+func CreateDocumentInteraction(practiceKey, patientID string, params *DocumentInteractionParams) (*DocumentInteraction, error) {
+	return defaultClient.DocumentInteractions.Create(practiceKey, patientID, params)
+}
+
+// CreateDocumentInteraction creates a document interaction on a patient.
+func (c *practiceClient) CreateDocumentInteraction(patientID string, params *DocumentInteractionParams) (*DocumentInteraction, error) {
+	return c.client.DocumentInteractions.Create(c.accessToken, patientID, params)
 }
