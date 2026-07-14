@@ -11,14 +11,41 @@ type client struct {
 
 var defaultClient = getC()
 
-func getC() *client {
+// clientOptions holds the configurable settings applied when constructing a
+// client. Zero values indicate that the corresponding default should be used.
+type clientOptions struct {
+	baseURL string
+}
+
+// Option configures optional behavior of a client created via NewPracticeClient.
+type Option func(*clientOptions)
+
+// WithBaseURL configures the base API URL used for all calls made by the client.
+// When this option is not provided, the base URL defaults to the value derived
+// from the Testing flag (staging when true, production otherwise).
+//
+// The provided URL is used as-is as the prefix for request paths, so it should
+// include any scheme, host, and base path (e.g. "https://api.hint.com/api").
+func WithBaseURL(baseURL string) Option {
+	return func(o *clientOptions) {
+		o.baseURL = baseURL
+	}
+}
+
+func getC(opts ...Option) *client {
+	var options clientOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	backend := getBackend(options.baseURL)
 	return &client{
-		Patient:              &patientClient{B: GetBackend(), Key: Key},
-		OAuth:                &oauthClient{B: GetBackend(), Key: Key},
-		Partner:              &partnerClient{B: GetBackend(), Key: Key},
-		Practitioner:         &practitionerClient{B: GetBackend(), Key: Key},
-		IntegrationRecords:   &integrationRecordsClient{B: GetBackend(), Key: Key},
-		DocumentInteractions: &documentInteractionClient{B: GetBackend(), Key: Key},
+		Patient:              &patientClient{B: backend, Key: Key},
+		OAuth:                &oauthClient{B: backend, Key: Key},
+		Partner:              &partnerClient{B: backend, Key: Key},
+		Practitioner:         &practitionerClient{B: backend, Key: Key},
+		IntegrationRecords:   &integrationRecordsClient{B: backend, Key: Key},
+		DocumentInteractions: &documentInteractionClient{B: backend, Key: Key},
 	}
 }
 
@@ -39,11 +66,14 @@ type PracticeClient interface {
 	CreateDocumentInteraction(patientID string, params *DocumentInteractionParams) (*DocumentInteraction, error)
 }
 
-// NewPracticeClient returns an implementation of practiceClient
-func NewPracticeClient(accessToken string) PracticeClient {
+// NewPracticeClient returns an implementation of practiceClient. Options may be
+// supplied to customize the client, for example WithBaseURL to override the base
+// API URL used for calls. When no options are provided the client uses the base
+// URL derived from the Testing flag.
+func NewPracticeClient(accessToken string, opts ...Option) PracticeClient {
 	return &practiceClient{
 		accessToken: accessToken,
-		client:      getC(),
+		client:      getC(opts...),
 	}
 }
 

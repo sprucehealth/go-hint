@@ -10,20 +10,23 @@ import (
 	"time"
 )
 
+// https://developers.hint.com/reference/making-requests
 const (
-	prodAPIURL         = "https://api.hint.com/api"
-	stagingAPIURL      = "https://api.staging.hint.com/api"
+	ProdAPIURL         = "https://api.hint.com/api"
+	StagingAPIURL      = "https://api.staging.hint.com/api"
+	SandboxAPIURL      = "https://api.sandbox.hint.com/api"
 	prodProviderURL    = "https://provider.hint.com"
 	stagingProviderURL = "https://provider.staging.hint.com"
+	sandboxProviderURL = "https://provider.sandbox.hint.com"
 )
 
 // apiURL returns the production or staging url based on the
 // Testing bool
 func apiURL() string {
 	if Testing {
-		return stagingAPIURL
+		return StagingAPIURL
 	}
-	return prodAPIURL
+	return ProdAPIURL
 }
 
 // ProviderURL returns the production or staging url for where the provider
@@ -44,19 +47,41 @@ type Backend interface {
 // BackendConfiguration is the internal implementation for making HTTP calls to Hint.
 type BackendConfiguration struct {
 	HTTPClient *http.Client
+
+	// baseURL, when non-empty, overrides the base API URL used for requests.
+	// When empty the URL is determined by apiURL (the Testing flag).
+	baseURL string
 }
 
-// GetBackend returns the currently used backend in the binding.
+// GetBackend returns the currently used backend in the binding. The base API
+// URL is determined by the Testing flag.
 func GetBackend() Backend {
+	return getBackend("")
+}
+
+// getBackend returns a backend that issues requests against the given base API
+// URL. When baseURL is empty the URL is determined by apiURL (the Testing flag).
+func getBackend(baseURL string) BackendConfiguration {
 	return BackendConfiguration{
 		HTTPClient: httpClient,
+		baseURL:    baseURL,
 	}
+}
+
+// resolveBaseURL returns the base API URL for the backend, preferring an
+// explicitly configured baseURL and otherwise falling back to the Testing-based
+// default.
+func (s BackendConfiguration) resolveBaseURL() string {
+	if s.baseURL != "" {
+		return s.baseURL
+	}
+	return apiURL()
 }
 
 // Key is the Hint Partner API key used globally in the binding.
 var Key string
 
-// Testing indicates whether to use the staging or production URL
+// Testing indicates whether to use the staging, sandbox, or production URL
 var Testing bool
 
 var httpClient = &http.Client{Timeout: 30 * time.Second}
@@ -98,7 +123,7 @@ func (s BackendConfiguration) NewRequest(method, path, key string, body io.Reade
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
-	path = apiURL() + path
+	path = s.resolveBaseURL() + path
 
 	req, err := http.NewRequest(method, path, body)
 	if err != nil {
