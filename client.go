@@ -14,10 +14,12 @@ var defaultClient = getC()
 // clientOptions holds the configurable settings applied when constructing a
 // client. Zero values indicate that the corresponding default should be used.
 type clientOptions struct {
-	baseURL string
+	baseURL    string
+	partnerKey string
 }
 
-// Option configures optional behavior of a client created via NewPracticeClient.
+// Option configures optional behavior of a client created via NewPracticeClient
+// or NewOAuthClient.
 type Option func(*clientOptions)
 
 // WithBaseURL configures the base API URL used for all calls made by the client.
@@ -32,6 +34,15 @@ func WithBaseURL(baseURL string) Option {
 	}
 }
 
+// WithPartnerKey configures the Hint partner API key used by the client (e.g. a
+// sandbox partner key). When this option is not provided, the client falls back
+// to the package-global Key at call time.
+func WithPartnerKey(key string) Option {
+	return func(o *clientOptions) {
+		o.partnerKey = key
+	}
+}
+
 func getC(opts ...Option) *client {
 	var options clientOptions
 	for _, opt := range opts {
@@ -41,7 +52,7 @@ func getC(opts ...Option) *client {
 	backend := getBackend(options.baseURL)
 	return &client{
 		Patient:              &patientClient{B: backend, Key: Key},
-		OAuth:                &oauthClient{B: backend, Key: Key},
+		OAuth:                &oauthClient{B: backend, Key: options.partnerKey},
 		Partner:              &partnerClient{B: backend, Key: Key},
 		Practitioner:         &practitionerClient{B: backend, Key: Key},
 		IntegrationRecords:   &integrationRecordsClient{B: backend, Key: Key},
@@ -152,6 +163,16 @@ func ListPatient(practiceKey string, params *ListParams) *Iter {
 // based on the iterator.
 func (c *practiceClient) ListPatient(params *ListParams) *Iter {
 	return c.client.Patient.List(c.accessToken, params)
+}
+
+// NewOAuthClient returns an implementation of OAuthClient. Options may be
+// supplied to customize the client, for example WithBaseURL to override the
+// base API URL used for the token exchange (e.g. SandboxAPIURL) and
+// WithPartnerKey to override the partner API key used for authentication.
+// When no options are provided the client uses the base URL derived from the
+// Testing flag and the package-global Key.
+func NewOAuthClient(opts ...Option) OAuthClient {
+	return getC(opts...).OAuth
 }
 
 // GrantAPIKey exchanges the OAuth token for a practice API key.
