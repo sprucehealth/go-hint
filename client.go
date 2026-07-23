@@ -7,6 +7,7 @@ type client struct {
 	Practitioner         PractitionerClient
 	IntegrationRecords   IntegrationRecordsClient
 	DocumentInteractions DocumentInteractionClient
+	Installations        InstallationClient
 }
 
 var defaultClient = getC()
@@ -57,6 +58,7 @@ func getC(opts ...Option) *client {
 		Practitioner:         &practitionerClient{B: backend, Key: Key},
 		IntegrationRecords:   &integrationRecordsClient{B: backend, Key: Key},
 		DocumentInteractions: &documentInteractionClient{B: backend, Key: Key},
+		Installations:        &installationClient{B: backend, Key: options.partnerKey},
 	}
 }
 
@@ -111,6 +113,11 @@ func SetPractitionerClient(c PractitionerClient) {
 // SetDocumentInteractionsClient enables caller to provide a particular implementation of the document interactions client for mocking purposes.
 func SetDocumentInteractionsClient(c DocumentInteractionClient) {
 	defaultClient.DocumentInteractions = c
+}
+
+// SetInstallationsClient enables caller to provide a particular implementation of the installations client for mocking purposes.
+func SetInstallationsClient(c InstallationClient) {
+	defaultClient.Installations = c
 }
 
 // NewPatient creates a new patient based on the params.
@@ -218,4 +225,31 @@ func CreateDocumentInteraction(practiceKey, patientID string, params *DocumentIn
 // CreateDocumentInteraction creates a document interaction on a patient.
 func (c *practiceClient) CreateDocumentInteraction(patientID string, params *DocumentInteractionParams) (*DocumentInteraction, error) {
 	return c.client.DocumentInteractions.Create(c.accessToken, patientID, params)
+}
+
+// ListInstallations returns the partner's installations
+// (GET /partner/installations) using the package-global Key.
+func ListInstallations() ([]*Installation, error) {
+	return defaultClient.Installations.List()
+}
+
+// PushCredential pushes (or rotates) the credential for an installation using
+// the package-global Key and returns the stored credential record.
+func PushCredential(installationID string, params *CredentialParams) (*Credential, error) {
+	return defaultClient.Installations.PushCredential(installationID, params)
+}
+
+// ConnectInstallation activates a pending installation using the authorization
+// code issued when the practice installed the product, authenticating with the
+// package-global Key, and returns the installation object with its API
+// credentials.
+func ConnectInstallation(params *ConnectParams) (*Installation, error) {
+	return defaultClient.Installations.Connect(params)
+}
+
+// DeactivateInstallation deactivates the installation using the package-global
+// Key and returns the updated installation object. The practice's other
+// installations are not affected.
+func DeactivateInstallation(installationID string) (*Installation, error) {
+	return defaultClient.Installations.Deactivate(installationID)
 }

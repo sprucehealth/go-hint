@@ -38,10 +38,23 @@ func ProviderURL() string {
 	return prodProviderURL
 }
 
+// RequestOption customizes an outgoing HTTP request before it is sent, for
+// example to add an endpoint specific header such as the Hint-Version header
+// required by the marketplace endpoints. Options are applied after the default
+// basic auth and Content-Type are set, so they may override them.
+type RequestOption func(*http.Request)
+
+// WithHeader sets a header on the request, overriding any existing value.
+func WithHeader(key, value string) RequestOption {
+	return func(r *http.Request) {
+		r.Header.Set(key, value)
+	}
+}
+
 // Backend is an interface for making calls against a Hint service.
 // This interface exists to enable mocking during testing if needed.
 type Backend interface {
-	Call(method, path, key string, params Params, v interface{}) (http.Header, error)
+	Call(method, path, key string, params Params, v interface{}, opts ...RequestOption) (http.Header, error)
 }
 
 // BackendConfiguration is the internal implementation for making HTTP calls to Hint.
@@ -91,7 +104,7 @@ func SetHTTPClient(client *http.Client) {
 	httpClient = client
 }
 
-func (s BackendConfiguration) Call(method, path, key string, params Params, v interface{}) (http.Header, error) {
+func (s BackendConfiguration) Call(method, path, key string, params Params, v interface{}, opts ...RequestOption) (http.Header, error) {
 	var data io.Reader
 	if params != nil {
 		if err := params.Validate(); err != nil {
@@ -105,7 +118,7 @@ func (s BackendConfiguration) Call(method, path, key string, params Params, v in
 		data = bytes.NewReader(jsonData)
 	}
 
-	req, err := s.NewRequest(method, path, key, data)
+	req, err := s.NewRequest(method, path, key, data, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -118,8 +131,10 @@ func (s BackendConfiguration) Call(method, path, key string, params Params, v in
 	return responseHeaders, nil
 }
 
-// NewRequest is used by Call to generate an http.Request.
-func (s BackendConfiguration) NewRequest(method, path, key string, body io.Reader) (*http.Request, error) {
+// NewRequest is used by Call to generate an http.Request. Any RequestOptions are
+// applied last, after the default basic auth and Content-Type are set, so they
+// may override them (e.g. to add the Hint-Version header).
+func (s BackendConfiguration) NewRequest(method, path, key string, body io.Reader, opts ...RequestOption) (*http.Request, error) {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
@@ -135,6 +150,10 @@ func (s BackendConfiguration) NewRequest(method, path, key string, body io.Reade
 	switch method {
 	case "POST", "PATCH", "PUT":
 		req.Header.Add("Content-Type", "application/json")
+	}
+
+	for _, opt := range opts {
+		opt(req)
 	}
 
 	return req, nil
