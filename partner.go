@@ -39,9 +39,18 @@ func NewPartnerClient(backend Backend, key string) PartnerClient {
 	}
 }
 
+// resolveKey mirrors oauthClient.resolveKey: prefer the per-client key,
+// otherwise fall back to the package-global Key at call time.
+func (c partnerClient) resolveKey() string {
+	if c.Key != "" {
+		return c.Key
+	}
+	return Key
+}
+
 func (c partnerClient) Get() (*Partner, error) {
 	var partner Partner
-	if _, err := c.B.Call("GET", "/partner", Key, nil, &partner); err != nil {
+	if _, err := c.B.Call("GET", "/partner", c.resolveKey(), nil, &partner); err != nil {
 		return nil, err
 	}
 
@@ -50,7 +59,7 @@ func (c partnerClient) Get() (*Partner, error) {
 
 func (c partnerClient) Update(params *PartnerParams) (*Partner, error) {
 	var partner Partner
-	if _, err := c.B.Call("PATCH", "/partner", Key, params, &partner); err != nil {
+	if _, err := c.B.Call("PATCH", "/partner", c.resolveKey(), params, &partner); err != nil {
 		return nil, err
 	}
 

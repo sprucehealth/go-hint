@@ -54,7 +54,7 @@ func getC(opts ...Option) *client {
 	return &client{
 		Patient:              &patientClient{B: backend, Key: Key},
 		OAuth:                &oauthClient{B: backend, Key: options.partnerKey},
-		Partner:              &partnerClient{B: backend, Key: Key},
+		Partner:              &partnerClient{B: backend, Key: options.partnerKey},
 		Practitioner:         &practitionerClient{B: backend, Key: Key},
 		IntegrationRecords:   &integrationRecordsClient{B: backend, Key: Key},
 		DocumentInteractions: &documentInteractionClient{B: backend, Key: Key},
