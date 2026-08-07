@@ -18,9 +18,20 @@ const (
 
 // Allowed values for Installation.Status.
 const (
+	InstallationStatusOnboarding  = "onboarding"
+	InstallationStatusPending     = "pending"
 	InstallationStatusActive      = "active"
 	InstallationStatusDeactivated = "deactivated"
 )
+
+// AvailableInstallationStatuses are the statuses an installation can be in, and
+// the values accepted by InstallationListParams.Status.
+var AvailableInstallationStatuses = []string{
+	InstallationStatusOnboarding,
+	InstallationStatusPending,
+	InstallationStatusActive,
+	InstallationStatusDeactivated,
+}
 
 // Installation represents a partner app installation on a practice, as returned
 // by GET /partner/installations and POST /partner/installations/connect.
@@ -47,9 +58,17 @@ type Product struct {
 }
 
 // APIKey is an API credential the practice's app uses to authenticate.
+//
+// Which fields are populated depends on the endpoint that returned the key.
+// Connect and the single-key endpoints (InstallationClient.CreateAPIKey,
+// UpdateAPIKey) return ID and Token; the list endpoint
+// (InstallationClient.ListAPIKeys) returns neither, and identifies the key by
+// TokenLast4 instead. Token itself only carries the full secret in the response
+// to CreateAPIKey — Hint cannot return it again afterwards.
 type APIKey struct {
 	ID            string     `json:"id"`
 	Token         string     `json:"token"`
+	TokenLast4    string     `json:"token_last_4"`
 	Label         *string    `json:"label"`
 	CreatedAt     time.Time  `json:"created_at"`
 	LastUsedAt    *time.Time `json:"last_used_at"`
@@ -114,13 +133,89 @@ func (p *ConnectParams) Validate() error {
 	return nil
 }
 
+// InstallationListParams are the filters accepted by GET /partner/installations.
+// A nil *InstallationListParams applies no filters and uses the server's default
+// page size.
+type InstallationListParams struct {
+	// Status narrows the results to installations in this status. Use one of the
+	// AvailableInstallationStatuses values.
+	Status string
+	// PartnerProduct narrows the results to a single partner product, identified
+	// by its public product ID (Product.ID).
+	PartnerProduct string
+	// CreatedAt filters on the installation's creation timestamp. Operands must be
+	// ISO8601 timestamps, and the operators are limited to gt, gte, lt and lte:
+	// created_at accepts a range object rather than an exact match.
+	CreatedAt []*Operation
+	// Offset is the starting position for pagination. The iterator returned by
+	// List advances it automatically when fetching subsequent pages.
+	Offset uint64
+	// Limit constrains the number of installations returned per page. Zero omits
+	// the parameter so the server default applies.
+	Limit uint64
+}
+
+// toListParams converts the typed filters into the generic ListParams the
+// backend query encoder and the Iter pagination both operate on. A nil receiver
+// yields empty (unfiltered) params.
+func (p *InstallationListParams) toListParams() *ListParams {
+	listParams := &ListParams{}
+	if p == nil {
+		return listParams
+	}
+
+	if p.Status != "" {
+		listParams.Items = append(listParams.Items, equalToQueryItem("status", p.Status))
+	}
+	if p.PartnerProduct != "" {
+		listParams.Items = append(listParams.Items, equalToQueryItem("partner_product", p.PartnerProduct))
+	}
+	if len(p.CreatedAt) > 0 {
+		listParams.Items = append(listParams.Items, &QueryItem{
+			Field:      "created_at",
+			Operations: p.CreatedAt,
+		})
+	}
+	listParams.Offset = p.Offset
+	listParams.Limit = p.Limit
+
+	return listParams
+}
+
+// Encode returns the query string for the params, in the format documented at
+// https://developers.hint.com/reference/making-requests#advanced-querying.
+func (p *InstallationListParams) Encode() (string, error) {
+	return p.toListParams().Encode()
+}
+
+// InstallationIter paginates through a partner's installations. It behaves like
+// Iter but exposes the current element as a typed *Installation.
+type InstallationIter struct {
+	*Iter
+}
+
+// Installation returns the installation the iterator currently points to.
+func (it *InstallationIter) Installation() *Installation {
+	installation, _ := it.Current().(*Installation)
+	return installation
+}
+
 // InstallationClient exposes the marketplace endpoints for listing a partner's
 // installations and pushing (or rotating) the credential a practice's custom
 // apps use to call the partner API.
 type InstallationClient interface {
-	// List returns the partner's installations (GET /partner/installations), the
-	// source of the installation IDs used by PushCredential.
-	List() ([]*Installation, error)
+	// List returns an iterator that paginates through the partner's installations
+	// (GET /partner/installations), the source of the installation IDs used by
+	// Get, Activate, Deactivate and PushCredential. A nil params lists every
+	// installation.
+	List(params *InstallationListParams) *InstallationIter
+	// Get returns a single installation by ID (GET /partner/installations/{id}).
+	// Deactivated installations are returned too, so a partner can inspect the
+	// durable per-product install row across the install/uninstall cycle.
+	Get(installationID string) (*Installation, error)
+	// Activate activates a pending installation, once the practice has activated
+	// the connection, and returns the updated installation object.
+	Activate(installationID string) (*Installation, error)
 	// PushCredential pushes (or rotates) the credential for the installation and
 	// returns the stored record. Sending it again with a new base_url/payload
 	// updates the single active credential rather than creating duplicates.
@@ -132,6 +227,32 @@ type InstallationClient interface {
 	// Deactivate deactivates the installation and returns the updated installation
 	// object. The practice's other installations are not affected.
 	Deactivate(installationID string) (*Installation, error)
+	// ListWebhookEndpoints returns an iterator that paginates through the URLs
+	// Hint delivers the installation's webhook events to. A nil params lists every
+	// endpoint.
+	ListWebhookEndpoints(installationID string, params *WebhookEndpointListParams) *WebhookEndpointIter
+	// CreateWebhookEndpoint registers a URL for the installation's webhook events
+	// and returns the created endpoint.
+	CreateWebhookEndpoint(installationID string, params *WebhookEndpointParams) (*WebhookEndpoint, error)
+	// UpdateWebhookEndpoint points an existing webhook endpoint at a new URL and
+	// returns the updated endpoint.
+	UpdateWebhookEndpoint(installationID, webhookEndpointID string, params *WebhookEndpointParams) (*WebhookEndpoint, error)
+	// DeleteWebhookEndpoint removes a webhook endpoint from the installation, so
+	// Hint stops delivering the installation's events to it.
+	DeleteWebhookEndpoint(installationID, webhookEndpointID string) error
+	// ListAPIKeys returns an iterator that paginates through the API keys of the
+	// installation's practice connection. A nil params lists every key. The listed
+	// keys carry no ID or token, only their metadata.
+	ListAPIKeys(installationID string, params *APIKeyListParams) *APIKeyIter
+	// CreateAPIKey issues a new API key for the installation. The returned
+	// APIKey.Token holds the full secret and is the only time Hint returns it, so
+	// it has to be stored on receipt.
+	CreateAPIKey(installationID string, params *APIKeyParams) (*APIKey, error)
+	// UpdateAPIKey relabels an existing API key and returns the updated key.
+	UpdateAPIKey(installationID, apiKeyID string, params *APIKeyParams) (*APIKey, error)
+	// DeleteAPIKey removes an API key from the installation's practice
+	// connection, so it can no longer be used to authenticate.
+	DeleteAPIKey(installationID, apiKeyID string) error
 }
 
 type installationClient struct {
@@ -157,13 +278,66 @@ func (c installationClient) resolveKey() string {
 	return Key
 }
 
-func (c installationClient) List() ([]*Installation, error) {
-	installations := []*Installation{}
-	if _, err := c.B.Call("GET", "/partner/installations", c.resolveKey(), nil, &installations,
+func (c installationClient) List(params *InstallationListParams) *InstallationIter {
+	iter := GetIter(params.toListParams(), func(lp *ListParams) ([]interface{}, ListMeta, error) {
+		var meta ListMeta
+
+		encodedParams, err := lp.Encode()
+		if err != nil {
+			return nil, meta, err
+		}
+
+		path := "/partner/installations"
+		if encodedParams != "" {
+			path += "?" + encodedParams
+		}
+
+		var installations []*Installation
+		resHeaders, err := c.B.Call("GET", path, c.resolveKey(), nil, &installations,
+			WithHeader(hintVersionHeader, HintVersionMarketplace))
+		if err != nil {
+			return nil, meta, err
+		}
+
+		if meta, err = parseListMeta(resHeaders); err != nil {
+			return nil, meta, err
+		}
+
+		ret := make([]interface{}, len(installations))
+		for i, installation := range installations {
+			ret[i] = installation
+		}
+
+		return ret, meta, nil
+	})
+
+	return &InstallationIter{Iter: iter}
+}
+
+func (c installationClient) Get(installationID string) (*Installation, error) {
+	if installationID == "" {
+		return nil, errors.New("installation_id required")
+	}
+
+	installation := &Installation{}
+	if _, err := c.B.Call("GET", fmt.Sprintf("/partner/installations/%s", installationID), c.resolveKey(), nil, installation,
 		WithHeader(hintVersionHeader, HintVersionMarketplace)); err != nil {
 		return nil, err
 	}
-	return installations, nil
+	return installation, nil
+}
+
+func (c installationClient) Activate(installationID string) (*Installation, error) {
+	if installationID == "" {
+		return nil, errors.New("installation_id required")
+	}
+
+	installation := &Installation{}
+	if _, err := c.B.Call("POST", fmt.Sprintf("/partner/installations/%s/activate", installationID), c.resolveKey(), nil, installation,
+		WithHeader(hintVersionHeader, HintVersionMarketplace)); err != nil {
+		return nil, err
+	}
+	return installation, nil
 }
 
 func (c installationClient) PushCredential(installationID string, params *CredentialParams) (*Credential, error) {

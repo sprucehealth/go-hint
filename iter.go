@@ -1,10 +1,38 @@
 package hint
 
+import (
+	"net/http"
+	"strconv"
+)
+
 // ListMeta is the structure that contains the common properties
 // of List iterators.
 type ListMeta struct {
 	CurrentCount uint64 `json:"count"`
 	TotalCount   uint64 `json:"total_count"`
+}
+
+// parseListMeta reads the pagination counts Hint returns on list endpoints from
+// the response headers. Absent headers leave the corresponding count at zero.
+func parseListMeta(resHeaders http.Header) (ListMeta, error) {
+	var meta ListMeta
+	var err error
+
+	if xCountHeader := resHeaders.Get("x-count"); xCountHeader != "" {
+		meta.CurrentCount, err = strconv.ParseUint(xCountHeader, 10, 64)
+		if err != nil {
+			return meta, err
+		}
+	}
+
+	if xTotalCountHeader := resHeaders.Get("x-total-count"); xTotalCountHeader != "" {
+		meta.TotalCount, err = strconv.ParseUint(xTotalCountHeader, 10, 64)
+		if err != nil {
+			return meta, err
+		}
+	}
+
+	return meta, nil
 }
 
 // Query is the function used to get a page listing.
@@ -21,13 +49,20 @@ type Iter struct {
 	hasMore      bool
 	params       *ListParams
 	meta         ListMeta
+	// startOffset is the offset the caller asked to start paginating from, so
+	// subsequent pages resume after it rather than from the start of the list.
+	startOffset uint64
 }
 
 // GetIter returns an implementation of an iterator based on the
 // params and the query function.
 func GetIter(params *ListParams, query Query) *Iter {
+	if params == nil {
+		params = &ListParams{}
+	}
 	iter := &Iter{
-		params: params,
+		params:      params,
+		startOffset: params.Offset,
 	}
 	iter.query = query
 	iter.getPage()
@@ -37,7 +72,9 @@ func GetIter(params *ListParams, query Query) *Iter {
 func (it *Iter) getPage() error {
 	it.values, it.meta, it.err = it.query(it.params)
 	it.totalQueried += uint64(len(it.values))
-	it.hasMore = it.totalQueried < it.meta.TotalCount
+	// TotalCount counts every record matching the filters, so the starting offset
+	// counts towards it as well.
+	it.hasMore = it.startOffset+it.totalQueried < it.meta.TotalCount
 	return it.err
 }
 
@@ -46,7 +83,7 @@ func (it *Iter) getPage() error {
 // or the query results in an error.
 func (it *Iter) Next() bool {
 	if len(it.values) == 0 && it.hasMore {
-		it.params.Offset = it.totalQueried
+		it.params.Offset = it.startOffset + it.totalQueried
 		if err := it.getPage(); err != nil {
 			return false
 		}

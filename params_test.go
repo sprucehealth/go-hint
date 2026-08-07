@@ -2,6 +2,31 @@ package hint
 
 import "testing"
 
+func TestOperationEncode(t *testing.T) {
+	cases := []struct {
+		name      string
+		operation *Operation
+		expected  string
+	}{
+		{"greater than", &Operation{Operator: OperatorGreaterThan, Operand: "1"}, `"gt":"1"`},
+		{"greater than equal to", &Operation{Operator: OperatorGreaterThanEqualTo, Operand: "1"}, `"gte":"1"`},
+		{"less than", &Operation{Operator: OperatorLessThan, Operand: "1"}, `"lt":"1"`},
+		{"less than equal to", &Operation{Operator: OperatorLessThanEqualTo, Operand: "1"}, `"lte":"1"`},
+		{"equal to", &Operation{Operator: OperatorEqualTo, Operand: "1"}, "1"},
+		// is_present takes a bare JSON boolean rather than a quoted string.
+		{"is present", IsPresent(true), `"is_present":true`},
+		{"is not present", IsPresent(false), `"is_present":false`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if encoded := tc.operation.Encode(); encoded != tc.expected {
+				t.Fatalf("expected %s got %s", tc.expected, encoded)
+			}
+		})
+	}
+}
+
 func TestListParams(t *testing.T) {
 	t.Run("OnlyOffsetAndLimit", func(t *testing.T) {
 		l := ListParams{
