@@ -42,6 +42,15 @@ type Operation struct {
 	Operand  string
 }
 
+// equalToQueryItem builds the QueryItem for an exact match on a field, the
+// shape typed list params use for their simple string filters.
+func equalToQueryItem(field, value string) *QueryItem {
+	return &QueryItem{
+		Field:      field,
+		Operations: []*Operation{{Operator: OperatorEqualTo, Operand: value}},
+	}
+}
+
 type Operator int
 
 const (
@@ -50,7 +59,18 @@ const (
 	OperatorLessThan
 	OperatorLessThanEqualTo
 	OperatorEqualTo
+	// OperatorIsPresent matches on whether the field is set at all rather than on
+	// its value. It is only accepted on select filters, such as the
+	// deactivated_at filter on an installation's API keys. Build it with
+	// IsPresent, which formats the operand correctly.
+	OperatorIsPresent
 )
+
+// IsPresent returns the operation that narrows a filter to records where the
+// field is set (present true) or unset (present false).
+func IsPresent(present bool) *Operation {
+	return &Operation{Operator: OperatorIsPresent, Operand: strconv.FormatBool(present)}
+}
 
 func (l *ListParams) Encode() (string, error) {
 	var buffer bytes.Buffer
@@ -140,6 +160,9 @@ func (o *Operation) Encode() string {
 		return fmt.Sprintf(`"lte":"%s"`, o.Operand)
 	case OperatorEqualTo:
 		return o.Operand
+	case OperatorIsPresent:
+		// The operand is a JSON boolean here rather than a quoted string.
+		return fmt.Sprintf(`"is_present":%s`, o.Operand)
 	}
 
 	return ""

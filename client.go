@@ -227,10 +227,23 @@ func (c *practiceClient) CreateDocumentInteraction(patientID string, params *Doc
 	return c.client.DocumentInteractions.Create(c.accessToken, patientID, params)
 }
 
-// ListInstallations returns the partner's installations
-// (GET /partner/installations) using the package-global Key.
-func ListInstallations() ([]*Installation, error) {
-	return defaultClient.Installations.List()
+// ListInstallations returns an iterator that paginates through the partner's
+// installations (GET /partner/installations) using the package-global Key. A nil
+// params lists every installation.
+func ListInstallations(params *InstallationListParams) *InstallationIter {
+	return defaultClient.Installations.List(params)
+}
+
+// GetInstallation returns a single installation by ID using the package-global
+// Key. Deactivated installations are returned too.
+func GetInstallation(installationID string) (*Installation, error) {
+	return defaultClient.Installations.Get(installationID)
+}
+
+// ActivateInstallation activates a pending installation using the
+// package-global Key and returns the updated installation object.
+func ActivateInstallation(installationID string) (*Installation, error) {
+	return defaultClient.Installations.Activate(installationID)
 }
 
 // PushCredential pushes (or rotates) the credential for an installation using
@@ -252,4 +265,58 @@ func ConnectInstallation(params *ConnectParams) (*Installation, error) {
 // installations are not affected.
 func DeactivateInstallation(installationID string) (*Installation, error) {
 	return defaultClient.Installations.Deactivate(installationID)
+}
+
+// ListWebhookEndpoints returns an iterator that paginates through the URLs Hint
+// delivers the installation's webhook events to, using the package-global Key. A
+// nil params lists every endpoint.
+func ListWebhookEndpoints(installationID string, params *WebhookEndpointListParams) *WebhookEndpointIter {
+	return defaultClient.Installations.ListWebhookEndpoints(installationID, params)
+}
+
+// CreateWebhookEndpoint registers a URL for the installation's webhook events
+// using the package-global Key and returns the created endpoint.
+func CreateWebhookEndpoint(installationID string, params *WebhookEndpointParams) (*WebhookEndpoint, error) {
+	return defaultClient.Installations.CreateWebhookEndpoint(installationID, params)
+}
+
+// UpdateWebhookEndpoint points an existing webhook endpoint at a new URL using
+// the package-global Key and returns the updated endpoint.
+func UpdateWebhookEndpoint(installationID, webhookEndpointID string, params *WebhookEndpointParams) (*WebhookEndpoint, error) {
+	return defaultClient.Installations.UpdateWebhookEndpoint(installationID, webhookEndpointID, params)
+}
+
+// DeleteWebhookEndpoint removes a webhook endpoint from the installation using
+// the package-global Key, so Hint stops delivering the installation's events to
+// it.
+func DeleteWebhookEndpoint(installationID, webhookEndpointID string) error {
+	return defaultClient.Installations.DeleteWebhookEndpoint(installationID, webhookEndpointID)
+}
+
+// ListInstallationAPIKeys returns an iterator that paginates through the API
+// keys of the installation's practice connection, using the package-global Key.
+// A nil params lists every key. The listed keys carry no ID or token, only their
+// metadata.
+func ListInstallationAPIKeys(installationID string, params *APIKeyListParams) *APIKeyIter {
+	return defaultClient.Installations.ListAPIKeys(installationID, params)
+}
+
+// CreateInstallationAPIKey issues a new API key for the installation using the
+// package-global Key. The returned APIKey.Token holds the full secret and is the
+// only time Hint returns it, so it has to be stored on receipt.
+func CreateInstallationAPIKey(installationID string, params *APIKeyParams) (*APIKey, error) {
+	return defaultClient.Installations.CreateAPIKey(installationID, params)
+}
+
+// UpdateInstallationAPIKey relabels an existing API key using the
+// package-global Key and returns the updated key.
+func UpdateInstallationAPIKey(installationID, apiKeyID string, params *APIKeyParams) (*APIKey, error) {
+	return defaultClient.Installations.UpdateAPIKey(installationID, apiKeyID, params)
+}
+
+// DeleteInstallationAPIKey removes an API key from the installation's practice
+// connection using the package-global Key, so it can no longer be used to
+// authenticate.
+func DeleteInstallationAPIKey(installationID, apiKeyID string) error {
+	return defaultClient.Installations.DeleteAPIKey(installationID, apiKeyID)
 }

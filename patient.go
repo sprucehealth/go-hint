@@ -3,7 +3,6 @@ package hint
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 )
 
@@ -215,18 +214,8 @@ func (c patientClient) List(practiceKey string, params *ListParams) *Iter {
 			return nil, meta, err
 		}
 
-		if xCountHeader := resHeaders.Get("x-count"); xCountHeader != "" {
-			meta.CurrentCount, err = strconv.ParseUint(xCountHeader, 10, 64)
-			if err != nil {
-				return nil, meta, err
-			}
-		}
-
-		if xTotalCountHeader := resHeaders.Get("x-total-count"); xTotalCountHeader != "" {
-			meta.TotalCount, err = strconv.ParseUint(xTotalCountHeader, 10, 64)
-			if err != nil {
-				return nil, meta, err
-			}
+		if meta, err = parseListMeta(resHeaders); err != nil {
+			return nil, meta, err
 		}
 
 		ret := make([]interface{}, len(patients))
