@@ -7,7 +7,8 @@ import (
 )
 
 // hintVersionHeader and HintVersionMarketplace are sent on the marketplace
-// endpoints (installations + credential issuance) to opt in to that API version.
+// endpoints (installations, credential issuance, partner backends and
+// partner-level webhook endpoints) to opt in to that API version.
 const (
 	hintVersionHeader = "Hint-Version"
 

@@ -6,23 +6,19 @@ import (
 	"time"
 )
 
-// WebhookEndpoint is a URL that Hint delivers an installation's webhook events
-// to. An installation may have more than one.
+// WebhookEndpoint is a URL that Hint delivers webhook events to, either for a
+// single installation or (for the partner-level endpoints) for every
+// integration connected to the partner.
 type WebhookEndpoint struct {
 	ID         string `json:"id"`
 	WebhookURL string `json:"webhook_url"`
-	// PartnerBackend is the partner backend the endpoint belongs to.
+	// PartnerBackend is the partner backend the endpoint belongs to. Only its ID
+	// and Name are populated here; see PartnerBackendClient for the full object.
 	PartnerBackend *PartnerBackend `json:"partner_backend"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 	// LastDeliveredAt is null until Hint has delivered an event to the endpoint.
 	LastDeliveredAt *time.Time `json:"last_delivered_at"`
-}
-
-// PartnerBackend identifies the partner backend a webhook endpoint delivers to.
-type PartnerBackend struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
 }
 
 // WebhookEndpointParams is the request body for creating or updating an

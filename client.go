@@ -1,13 +1,15 @@
 package hint
 
 type client struct {
-	Patient              PatientClient
-	OAuth                OAuthClient
-	Partner              PartnerClient
-	Practitioner         PractitionerClient
-	IntegrationRecords   IntegrationRecordsClient
-	DocumentInteractions DocumentInteractionClient
-	Installations        InstallationClient
+	Patient                 PatientClient
+	OAuth                   OAuthClient
+	Partner                 PartnerClient
+	Practitioner            PractitionerClient
+	IntegrationRecords      IntegrationRecordsClient
+	DocumentInteractions    DocumentInteractionClient
+	Installations           InstallationClient
+	PartnerBackends         PartnerBackendClient
+	PartnerWebhookEndpoints PartnerWebhookEndpointClient
 }
 
 var defaultClient = getC()
@@ -52,13 +54,15 @@ func getC(opts ...Option) *client {
 
 	backend := getBackend(options.baseURL)
 	return &client{
-		Patient:              &patientClient{B: backend, Key: Key},
-		OAuth:                &oauthClient{B: backend, Key: options.partnerKey},
-		Partner:              &partnerClient{B: backend, Key: options.partnerKey},
-		Practitioner:         &practitionerClient{B: backend, Key: Key},
-		IntegrationRecords:   &integrationRecordsClient{B: backend, Key: Key},
-		DocumentInteractions: &documentInteractionClient{B: backend, Key: Key},
-		Installations:        &installationClient{B: backend, Key: options.partnerKey},
+		Patient:                 &patientClient{B: backend, Key: Key},
+		OAuth:                   &oauthClient{B: backend, Key: options.partnerKey},
+		Partner:                 &partnerClient{B: backend, Key: options.partnerKey},
+		Practitioner:            &practitionerClient{B: backend, Key: Key},
+		IntegrationRecords:      &integrationRecordsClient{B: backend, Key: Key},
+		DocumentInteractions:    &documentInteractionClient{B: backend, Key: Key},
+		Installations:           &installationClient{B: backend, Key: options.partnerKey},
+		PartnerBackends:         &partnerBackendClient{B: backend, Key: options.partnerKey},
+		PartnerWebhookEndpoints: &partnerWebhookEndpointClient{B: backend, Key: options.partnerKey},
 	}
 }
 
@@ -118,6 +122,16 @@ func SetDocumentInteractionsClient(c DocumentInteractionClient) {
 // SetInstallationsClient enables caller to provide a particular implementation of the installations client for mocking purposes.
 func SetInstallationsClient(c InstallationClient) {
 	defaultClient.Installations = c
+}
+
+// SetPartnerBackendsClient enables caller to provide a particular implementation of the partner backends client for mocking purposes.
+func SetPartnerBackendsClient(c PartnerBackendClient) {
+	defaultClient.PartnerBackends = c
+}
+
+// SetPartnerWebhookEndpointsClient enables caller to provide a particular implementation of the partner webhook endpoints client for mocking purposes.
+func SetPartnerWebhookEndpointsClient(c PartnerWebhookEndpointClient) {
+	defaultClient.PartnerWebhookEndpoints = c
 }
 
 // NewPatient creates a new patient based on the params.
@@ -319,4 +333,50 @@ func UpdateInstallationAPIKey(installationID, apiKeyID string, params *APIKeyPar
 // authenticate.
 func DeleteInstallationAPIKey(installationID, apiKeyID string) error {
 	return defaultClient.Installations.DeleteAPIKey(installationID, apiKeyID)
+}
+
+// ListPartnerBackends returns an iterator that paginates through the partner's
+// backends (GET /partner/backends) using the package-global Key. A nil params
+// lists every backend.
+func ListPartnerBackends(params *PartnerBackendListParams) *PartnerBackendIter {
+	return defaultClient.PartnerBackends.List(params)
+}
+
+// GetPartnerBackend returns a single partner backend by ID using the
+// package-global Key.
+func GetPartnerBackend(backendID string) (*PartnerBackend, error) {
+	return defaultClient.PartnerBackends.Get(backendID)
+}
+
+// UpdatePartnerBackend updates a partner backend's configuration using the
+// package-global Key and returns the updated backend.
+func UpdatePartnerBackend(backendID string, params *PartnerBackendUpdateParams) (*PartnerBackend, error) {
+	return defaultClient.PartnerBackends.Update(backendID, params)
+}
+
+// ListPartnerWebhookEndpoints returns an iterator that paginates through the
+// partner-level webhook endpoints (GET /partner/webhook_endpoints) using the
+// package-global Key. A nil params lists every endpoint.
+func ListPartnerWebhookEndpoints(params *PartnerWebhookEndpointListParams) *WebhookEndpointIter {
+	return defaultClient.PartnerWebhookEndpoints.List(params)
+}
+
+// CreatePartnerWebhookEndpoint registers a URL to receive events for every
+// integration connected to the partner, using the package-global Key, and
+// returns the created endpoint.
+func CreatePartnerWebhookEndpoint(params *PartnerWebhookEndpointParams) (*WebhookEndpoint, error) {
+	return defaultClient.PartnerWebhookEndpoints.Create(params)
+}
+
+// UpdatePartnerWebhookEndpoint points an existing partner-level webhook
+// endpoint at a new URL using the package-global Key and returns the updated
+// endpoint.
+func UpdatePartnerWebhookEndpoint(webhookEndpointID string, params *PartnerWebhookEndpointParams) (*WebhookEndpoint, error) {
+	return defaultClient.PartnerWebhookEndpoints.Update(webhookEndpointID, params)
+}
+
+// DeletePartnerWebhookEndpoint removes a partner-level webhook endpoint using
+// the package-global Key, so Hint stops delivering events to it.
+func DeletePartnerWebhookEndpoint(webhookEndpointID string) error {
+	return defaultClient.PartnerWebhookEndpoints.Delete(webhookEndpointID)
 }
