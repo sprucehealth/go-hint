@@ -103,9 +103,10 @@ func (p *CredentialParams) Validate() error {
 	return nil
 }
 
-// Credential is the stored credential record returned by PushCredential. The
-// payload is intentionally omitted: Hint stores it encrypted and never returns
-// it in any response.
+// Credential is the stored credential record returned by PushCredential and
+// GetCredential. The payload is intentionally omitted: Hint stores it encrypted
+// and never returns it in any response. DeactivatedAt is set once the
+// credential has been revoked (see InstallationClient.RevokeCredential).
 type Credential struct {
 	ID            string     `json:"id"`
 	BaseURL       string     `json:"base_url"`
@@ -202,13 +203,13 @@ func (it *InstallationIter) Installation() *Installation {
 }
 
 // InstallationClient exposes the marketplace endpoints for listing a partner's
-// installations and pushing (or rotating) the credential a practice's custom
-// apps use to call the partner API.
+// installations and managing the credential a practice's custom apps use to
+// call the partner API.
 type InstallationClient interface {
 	// List returns an iterator that paginates through the partner's installations
 	// (GET /partner/installations), the source of the installation IDs used by
-	// Get, Activate, Deactivate and PushCredential. A nil params lists every
-	// installation.
+	// Get, Activate, Deactivate and the credential methods. A nil params lists
+	// every installation.
 	List(params *InstallationListParams) *InstallationIter
 	// Get returns a single installation by ID (GET /partner/installations/{id}).
 	// Deactivated installations are returned too, so a partner can inspect the
@@ -221,6 +222,17 @@ type InstallationClient interface {
 	// returns the stored record. Sending it again with a new base_url/payload
 	// updates the single active credential rather than creating duplicates.
 	PushCredential(installationID string, params *CredentialParams) (*Credential, error)
+	// GetCredential returns the credential Hint holds on file for the
+	// installation (GET /partner/installations/{id}/credential). Only the
+	// record's metadata is returned, never the payload, so a partner can confirm
+	// what is stored and whether it has been rotated or revoked.
+	GetCredential(installationID string) (*Credential, error)
+	// RevokeCredential deactivates the installation's active credential
+	// (DELETE /partner/installations/{id}/credential). The record is kept for
+	// audit purposes but marked inactive, so the integration can accept a new
+	// credential via PushCredential. When several installations share an
+	// integration, the revocation applies to all of them.
+	RevokeCredential(installationID string) error
 	// Connect activates a pending installation using the authorization code
 	// issued when the practice installed the product, and returns the installation
 	// object with its API credentials (Installation.APIKeys).
@@ -341,17 +353,48 @@ func (c installationClient) Activate(installationID string) (*Installation, erro
 	return installation, nil
 }
 
+// credentialPath is the path of the installation's single practice credential,
+// shared by PushCredential, GetCredential and RevokeCredential.
+func credentialPath(installationID string) string {
+	return fmt.Sprintf("/partner/installations/%s/credential", installationID)
+}
+
 func (c installationClient) PushCredential(installationID string, params *CredentialParams) (*Credential, error) {
 	if installationID == "" {
 		return nil, errors.New("installation_id required")
 	}
 
 	credential := &Credential{}
-	if _, err := c.B.Call("POST", fmt.Sprintf("/partner/installations/%s/credential", installationID), c.resolveKey(), params, credential,
+	if _, err := c.B.Call("POST", credentialPath(installationID), c.resolveKey(), params, credential,
 		WithHeader(hintVersionHeader, HintVersionMarketplace)); err != nil {
 		return nil, err
 	}
 	return credential, nil
+}
+
+func (c installationClient) GetCredential(installationID string) (*Credential, error) {
+	if installationID == "" {
+		return nil, errors.New("installation_id required")
+	}
+
+	credential := &Credential{}
+	if _, err := c.B.Call("GET", credentialPath(installationID), c.resolveKey(), nil, credential,
+		WithHeader(hintVersionHeader, HintVersionMarketplace)); err != nil {
+		return nil, err
+	}
+	return credential, nil
+}
+
+func (c installationClient) RevokeCredential(installationID string) error {
+	if installationID == "" {
+		return errors.New("installation_id required")
+	}
+
+	if _, err := c.B.Call("DELETE", credentialPath(installationID), c.resolveKey(), nil, nil,
+		WithHeader(hintVersionHeader, HintVersionMarketplace)); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c installationClient) Connect(params *ConnectParams) (*Installation, error) {

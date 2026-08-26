@@ -448,6 +448,157 @@ func TestPushCredentialRequiresInstallationID(t *testing.T) {
 	}
 }
 
+func TestInstallationClientGetCredential(t *testing.T) {
+	var gotPath, gotMethod, gotKey, gotVersion string
+	var gotBody []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotMethod = r.Method
+		gotKey, _, _ = r.BasicAuth()
+		gotVersion = r.Header.Get("Hint-Version")
+		gotBody, _ = ioutil.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		// The payload is never returned, only the record's metadata. This one has
+		// already been revoked, so deactivated_at is set.
+		w.Write([]byte(`{
+			"id": "sbx-ppcred-testtesttest",
+			"base_url": "https://api.your-service.com",
+			"created_at": "2026-07-23T16:04:55.460804Z",
+			"deactivated_at": "2026-08-01T09:30:00.000000Z",
+			"updated_at": "2026-08-01T09:30:00.000000Z"
+		}`))
+	}))
+	defer srv.Close()
+
+	client := NewInstallationClient(WithBaseURL(srv.URL), WithPartnerKey("sandbox-key"))
+	credential, err := client.GetCredential("inst_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := "/partner/installations/inst_1/credential"; gotPath != want {
+		t.Fatalf("expected path %q, got %q", want, gotPath)
+	}
+	if want := "GET"; gotMethod != want {
+		t.Fatalf("expected method %q, got %q", want, gotMethod)
+	}
+	if want := "sandbox-key"; gotKey != want {
+		t.Fatalf("expected partner key %q, got %q", want, gotKey)
+	}
+	if want := HintVersionMarketplace; gotVersion != want {
+		t.Fatalf("expected Hint-Version %q, got %q", want, gotVersion)
+	}
+	if len(gotBody) != 0 {
+		t.Fatalf("expected no request body, got %s", gotBody)
+	}
+
+	if credential.ID != "sbx-ppcred-testtesttest" {
+		t.Fatalf("unexpected credential id: %q", credential.ID)
+	}
+	if credential.BaseURL != "https://api.your-service.com" {
+		t.Fatalf("unexpected base_url: %q", credential.BaseURL)
+	}
+	if credential.CreatedAt.IsZero() || credential.UpdatedAt.IsZero() {
+		t.Fatalf("expected created_at/updated_at to be parsed, got %v / %v", credential.CreatedAt, credential.UpdatedAt)
+	}
+	if credential.DeactivatedAt == nil || credential.DeactivatedAt.IsZero() {
+		t.Fatalf("expected deactivated_at to be parsed, got %v", credential.DeactivatedAt)
+	}
+}
+
+func TestInstallationClientGetCredentialError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"status": 404, "message": "Not Found"}`))
+	}))
+	defer srv.Close()
+
+	client := NewInstallationClient(WithBaseURL(srv.URL), WithPartnerKey("sandbox-key"))
+	credential, err := client.GetCredential("inst_1")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if credential != nil {
+		t.Fatalf("expected nil credential on error, got %+v", credential)
+	}
+	hintErr, ok := err.(*Error)
+	if !ok {
+		t.Fatalf("expected *Error, got %T: %v", err, err)
+	}
+	if hintErr.HTTPStatusCode != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, hintErr.HTTPStatusCode)
+	}
+}
+
+func TestInstallationClientRevokeCredential(t *testing.T) {
+	var gotPath, gotMethod, gotKey, gotVersion string
+	var gotBody []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotMethod = r.Method
+		gotKey, _, _ = r.BasicAuth()
+		gotVersion = r.Header.Get("Hint-Version")
+		gotBody, _ = ioutil.ReadAll(r.Body)
+		// Hint answers a successful revoke with 204 and no body.
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	client := NewInstallationClient(WithBaseURL(srv.URL), WithPartnerKey("sandbox-key"))
+	if err := client.RevokeCredential("inst_1"); err != nil {
+		t.Fatal(err)
+	}
+
+	if want := "/partner/installations/inst_1/credential"; gotPath != want {
+		t.Fatalf("expected path %q, got %q", want, gotPath)
+	}
+	if want := "DELETE"; gotMethod != want {
+		t.Fatalf("expected method %q, got %q", want, gotMethod)
+	}
+	if want := "sandbox-key"; gotKey != want {
+		t.Fatalf("expected partner key %q, got %q", want, gotKey)
+	}
+	if want := HintVersionMarketplace; gotVersion != want {
+		t.Fatalf("expected Hint-Version %q, got %q", want, gotVersion)
+	}
+	if len(gotBody) != 0 {
+		t.Fatalf("expected no request body, got %s", gotBody)
+	}
+}
+
+func TestInstallationClientRevokeCredentialError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"status": 404, "message": "Not Found"}`))
+	}))
+	defer srv.Close()
+
+	client := NewInstallationClient(WithBaseURL(srv.URL), WithPartnerKey("sandbox-key"))
+	err := client.RevokeCredential("inst_1")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	hintErr, ok := err.(*Error)
+	if !ok {
+		t.Fatalf("expected *Error, got %T: %v", err, err)
+	}
+	if hintErr.HTTPStatusCode != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, hintErr.HTTPStatusCode)
+	}
+}
+
+func TestGetAndRevokeCredentialRequireInstallationID(t *testing.T) {
+	client := NewInstallationClient(WithBaseURL("https://example.invalid"), WithPartnerKey("k"))
+	if _, err := client.GetCredential(""); err == nil {
+		t.Fatal("expected error for empty installation ID")
+	}
+	if err := client.RevokeCredential(""); err == nil {
+		t.Fatal("expected error for empty installation ID")
+	}
+}
+
 func TestCredentialParamsValidate(t *testing.T) {
 	cases := []struct {
 		name    string
