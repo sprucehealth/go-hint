@@ -252,6 +252,20 @@ func PushCredential(installationID string, params *CredentialParams) (*Credentia
 	return defaultClient.Installations.PushCredential(installationID, params)
 }
 
+// GetCredential returns the credential Hint holds on file for the installation
+// using the package-global Key. Only the record's metadata is returned, never
+// the payload.
+func GetCredential(installationID string) (*Credential, error) {
+	return defaultClient.Installations.GetCredential(installationID)
+}
+
+// RevokeCredential deactivates the installation's active credential using the
+// package-global Key. The record is kept for audit purposes but marked
+// inactive, so the integration can accept a new credential.
+func RevokeCredential(installationID string) error {
+	return defaultClient.Installations.RevokeCredential(installationID)
+}
+
 // ConnectInstallation activates a pending installation using the authorization
 // code issued when the practice installed the product, authenticating with the
 // package-global Key, and returns the installation object with its API
